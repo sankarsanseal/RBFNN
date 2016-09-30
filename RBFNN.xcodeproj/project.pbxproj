@@ -93,6 +93,7 @@
 				TargetAttributes = {
 					6A49EBEF1D9EB57400E6C2A8 = {
 						CreatedOnToolsVersion = 8.0;
+						DevelopmentTeam = 8FD63CD3J9;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -216,6 +217,8 @@
 		6A49EBF81D9EB57400E6C2A8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				DEVELOPMENT_TEAM = 8FD63CD3J9;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -223,6 +226,8 @@
 		6A49EBF91D9EB57400E6C2A8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				DEVELOPMENT_TEAM = 8FD63CD3J9;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
