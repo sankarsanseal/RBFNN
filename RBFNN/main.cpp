@@ -13,16 +13,16 @@
 
 using namespace std;
 
-const char PATH[1024]="/Users/sankarsanseal/Documents/RBFNN/RBFNN";
+const char PATH[1024]="/Users/sankarsanseal/Documents/RBFNN/RBFNN/";
 
-double ** kmean(double **dinput, double **doutput,int n,int k,int dimensions, int classes)
+double ** kmean(double ***dcluster, int *dclass_count,int k,int dimensions, int classes)
 {
     int i;
     double **centroids=NULL;
     centroids=(double **)malloc(sizeof(double *)*k*classes);
     for(i=0;i<k*classes;i++)
     {
-        centroids[i]=(double *)malloc(sizeof(double)*dimensions);
+        centroids[i]=(double *)malloc(sizeof(double)*(dimensions+1));
     }
     
     srand((unsigned)time(NULL));
@@ -98,7 +98,7 @@ void wine()
             }
             
         }
-        centroids=kmean(dinput, doutput, lines, k, noOfDimension, noOfClasses);
+       // centroids=kmean(, lines, k, noOfDimension, noOfClasses);
         
     }
     else
@@ -117,12 +117,15 @@ void iris()
     FILE * fp;
     int noOfDimension=4;
     int noOfClasses=3;
-    int i,j,k;
+    int i,j,k,l;
     
     double **dinput;
     double **doutput;
     double **centroids;
+    double ***dcluster;
+    int *dclass_count;
     int ylabel;
+    int count=0;
     
     fp=fopen(strcat(temp,"iris.train.txt"),"r");
     lines=0;
@@ -141,6 +144,11 @@ void iris()
         
         dinput=(double **)malloc(sizeof(double *)*lines);
         doutput=(double **)malloc(sizeof(double *)*lines);
+        dclass_count=(int *)malloc(sizeof(int)*noOfClasses);
+        dcluster=(double ***)malloc(sizeof(double *)*noOfClasses);
+        
+        for(i=0;i<noOfClasses;i++)
+            dclass_count[i]=0;
         
         
         fseek(fp,0,SEEK_SET);
@@ -162,14 +170,58 @@ void iris()
                 for(j=0;j<noOfClasses;j++)
                 {
                     if(j==(ylabel-1))
+                    {
                         doutput[i][j]=1;
+                        dclass_count[j]++;
+                    }
                     else
                         doutput[i][j]=0;
                 }
             }
             
         }
-        centroids=kmean(dinput, doutput, lines, k, noOfDimension, noOfClasses);
+        for(i=0;i<noOfClasses;i++)
+        {
+            dcluster[i]=(double **)malloc(sizeof(double *)*dclass_count[i]);
+            for(j=0;j<dclass_count[i];j++)
+            {
+                dcluster[i][j]=(double *)malloc(sizeof(double)*(noOfDimension+1));
+            }
+        }
+        
+        for(i=0;i<noOfClasses;i++)
+            dclass_count[i]=0;
+        
+        for(i=0;i<lines;i++)
+        {
+            for(j=0;j<noOfClasses;j++)
+            {
+                if(doutput[i][j]==1)
+                {
+                    for(l=0;l<noOfDimension;l++)
+                    {
+                        dcluster[j][dclass_count[j]][l]=dinput[i][l];
+                    }
+                    dclass_count[j]++;
+                }
+                    
+            }
+            
+        }
+       /* for(i=0;i<noOfClasses;i++)
+        {
+            for(j=0;j<dclass_count[i];j++)
+            {
+                for(l=0;l<noOfDimension;l++)
+                {
+                    cout<<dcluster[i][j][l]<<" ";
+                }
+                count++;
+                cout<<endl;
+            }
+            cout<<"count***"<<count<<endl;
+        }*/
+        centroids=kmean(dcluster, dclass_count, k, noOfDimension, noOfClasses);
         
     }
     else
