@@ -52,16 +52,42 @@ double sigmoid(double * hidden, double ** weight, int noOfHidden, int neuron_ind
     
 }
 
-double ** kmean(double ***dcluster, int *dclass_count,int k,int noOfDimensions, int noOfClasses)
+double signum(double * hidden, double ** weight, int noOfHidden, int neuron_ind)
+{
+    int i;
+    double result=0;
+    double induced_local=0;
+    for(i=0;i<noOfHidden;i++)
+    {
+        induced_local+=hidden[i]*weight[i][neuron_ind];
+    }
+
+    if(induced_local>= 0)
+        result=1;
+    else if (induced_local < 0)
+        result=-1;
+    
+    return result;
+}
+
+double ** kmean(double **dinput, int k,int noOfDimensions, int noOfPatterns)
 {
     int i,j,l,m;
     double **centroids=NULL;
     double **tempcentroids=NULL;
-    centroids=(double **)malloc(sizeof(double *)*k*noOfClasses);
-    tempcentroids=(double **)malloc(sizeof(double*)*k*noOfClasses);
+    centroids=(double **)malloc(sizeof(double *)*k);
+    tempcentroids=(double **)malloc(sizeof(double*)*k);
+    int *count;
     bool changed=true;
     
-    for(i=0;i<k*noOfClasses;i++)
+    count=(int *)malloc(sizeof(int)*k);
+    if(count!=NULL)
+    {
+        for(i=0;i<k;i++)
+            count[i]=0;
+    }
+    
+    for(i=0;i<k;i++)
     {
         centroids[i]=(double *)malloc(sizeof(double)*(noOfDimensions+1));
         tempcentroids[i]=(double *)malloc(sizeof(double)*(noOfDimensions+1));
@@ -70,145 +96,150 @@ double ** kmean(double ***dcluster, int *dclass_count,int k,int noOfDimensions, 
     srand((unsigned)time(NULL));
     if(centroids!=NULL)
     {
-        for(i=0;i<noOfClasses;i++)
+        for(l=0;l<k;l++)
         {
-            int base_index=(i*k);
-            for(l=0;l<k;l++)
+            int index=-1;
+            
+            index=rand()%noOfPatterns;
+            cout<<index<<endl;
+            for(m=0;m<noOfDimensions;m++)
             {
-                int index=-1;
-                index=rand()%dclass_count[i];
-                cout<<index<<endl;
-                for(m=0;m<noOfDimensions;m++)
-                {
-                    centroids[base_index+l][m]=dcluster[i][index][m];
-                }
-                centroids[base_index+l][noOfDimensions]=0;
+                centroids[l][m]=dinput[index][m];
             }
+            centroids[l][noOfDimensions]=0;
         }
     }
+    
     /*
-    for(i=0;i<noOfClasses;i++)
-    {
-        for(j=0;j<k;j++)
-        {
-            for(l=0;l<noOfDimensions+1;l++)
-            {
-                cout<<centroids[(i*k)+j][l]<<" ";
-            }
-            cout<<endl;
-        }
-        cout<<"***"<<endl;
-    }
+     for(i=0;i<noOfClasses;i++)
+     {
+     for(j=0;j<k;j++)
+     {
+     for(l=0;l<noOfDimensions+1;l++)
+     {
+     cout<<centroids[(i*k)+j][l]<<" ";
+     }
+     cout<<endl;
+     }
+     cout<<"***"<<endl;
+     }
      */
     while(changed)
     {
         changed=false;
-        for(i=0;i<noOfClasses;i++)
+        
+        for(l=0;l<noOfPatterns;l++)
         {
-            int start_index=(i*k);
-            int end_index=(i*k)+k;
-            for(l=0;l<dclass_count[i];l++)
+            
+            double min=DBL_MAX;
+            double distance=0;
+            int minindex=-1;
+            for(j=0;j<k;j++)
             {
-
-                double min=DBL_MAX;
-                double distance=0;
-                int minindex=-1;
-                for(j=start_index;j<end_index;j++)
+                
+                distance=euclidean( centroids[j],dinput[l],noOfDimensions);
+                if(min>distance)
                 {
-                    
-                    distance=euclidean( centroids[j],dcluster[i][l],noOfDimensions);
-                    if(min>distance)
-                    {
-                        min=distance;
-                        minindex=j;
-                    }
-                }
-                if(dcluster[i][l][noOfDimensions]!=(double)minindex)
-                {
-                    dcluster[i][l][noOfDimensions]=(double)minindex;
-                   // cout<<"minindex "<<dcluster[i][l][noOfDimensions]<<" : "<<minindex<<endl;
-                    changed=true;
+                    min=distance;
+                    minindex=j;
                 }
             }
-            
-            
+            if(dinput[l][noOfDimensions]!=(double)minindex)
+            {
+                dinput[l][noOfDimensions]=(double)minindex;
+                // cout<<"minindex "<<dcluster[i][l][noOfDimensions]<<" : "<<minindex<<endl;
+                changed=true;
+            }
         }
+        
+        
+        
         if(changed)
         {
             
-            for(i=0;i<k*noOfClasses;i++)
+            for(i=0;i<k;i++)
             {
+                count[i]=0;
                 for(j=0;j<=noOfDimensions;j++)
                 {
                     tempcentroids[i][j]=0;
                 }
             }
-            for(i=0;i<noOfClasses;i++)
+            
+            for(j=0;j<noOfPatterns;j++)
             {
-                int base_index=i*k;
-                for(j=0;j<dclass_count[i];j++)
+                
+                for(l=0;l<k;l++)
                 {
-                    
-                    for(l=base_index;l<base_index + k;l++)
+                    //cout<<dcluster[i][j][noOfDimensions]<<" : " <<l<<endl;
+                    if(dinput[j][noOfDimensions]==(double)l)
                     {
-                        //cout<<dcluster[i][j][noOfDimensions]<<" : " <<l<<endl;
-                        if(dcluster[i][j][noOfDimensions]==(double)l)
-                        {
-                           // cout<<"here"<<endl;
-                            for(m=0;m<noOfDimensions;m++)
-                                tempcentroids[l][m]+=dcluster[i][j][m];
-                            tempcentroids[l][noOfDimensions]+=euclidean(centroids[ l], dcluster[i][j], noOfDimensions);
-                           // for(m=0;m<=noOfDimensions;m++)
-                              //  cout<<" l:"<<l<<" m:"<<m<<" "<<tempcentroids[l][m]<<" ";
-                        }
-                        //cout<<endl;
+                        // cout<<"here"<<endl;
+                        
+                        for(m=0;m<noOfDimensions;m++)
+                            tempcentroids[l][m]+=dinput[j][m];
+                        
+                        tempcentroids[l][noOfDimensions]+=euclidean(tempcentroids[l], dinput[j], noOfDimensions);
+                        
+                        count[l]++;
+                        
+                        // for(m=0;m<=noOfDimensions;m++)
+                        //cout<<" l:"<<l<<" m:"<<m<<" "<<tempcentroids[l][m]<<" "<< "count: "<<count[l];
                     }
-                    
+                    //cout<<endl;
                 }
                 
-                int start_index=i*k;
-                int end_index=(i*k)+k;
-                for(j=start_index;j<end_index;j++)
+            }
+            
+            
+            for(j=0;j<k;j++)
+            {
+                 cout<<"Count: "<<count[j]<<endl;
+                if(count!=0)
                 {
                     for(l=0;l<=noOfDimensions;l++)
                     {   //cout<<"j:"<<j<<" l:"<<l<<" temp:"<<tempcentroids[j][l]<<" ";
-                        tempcentroids[j][l]/=dclass_count[i];
-                       // cout<<"temp avg"<<tempcentroids[j][l]<<" ";
+                        
+                        tempcentroids[j][l]/=count[j];
+                        //cout<<"temp avg : "<<tempcentroids[j][l]<<" ";
                     }
-                   // cout<<endl;
+                    //cout<<endl;
                 }
             }
-            
-            
-            for(i=0;i<k*noOfClasses;i++)
-            {
-                bool all_zero=true;
-                for(j=0;j<noOfDimensions;j++)
-                {
-                    if(tempcentroids[i][j]!=0)
-                    {
-                        all_zero=false;
-                        break;
-                    }
-                    else
-                        continue;
-                        
-                }
-                if(!all_zero)
-                {
-                    for(j=0;j<=noOfDimensions;j++)
-                    {
-                        
-                        centroids[i][j] = tempcentroids[i][j];
-                    }
-                }
-            }
-            
-            
         }
     }
-    for(i=0;i<k*noOfClasses;i++)
-        centroids[i][noOfDimensions]=1/(2*pow(centroids[i][noOfDimensions],2));
+    
+    
+    for(i=0;i<k;i++)
+    {
+        bool all_zero=true;
+        for(j=0;j<noOfDimensions;j++)
+        {
+            if(tempcentroids[i][j]!=0)
+            {
+                all_zero=false;
+                break;
+            }
+            else
+                continue;
+            
+        }
+        if(!all_zero)
+        {
+            for(j=0;j<=noOfDimensions;j++)
+            {
+                
+                centroids[i][j] = tempcentroids[i][j];
+            }
+        }
+    }
+    
+    
+    
+    
+    for(i=0;i<k;i++)
+        if(centroids[i][noOfDimensions]!=0)
+            centroids[i][noOfDimensions]=1/(2*pow(centroids[i][noOfDimensions],2));
     
     return centroids;
 }
@@ -268,7 +299,7 @@ void wine()
                     if(j==(ylabel-1))
                         doutput[i][j]=1;
                     else
-                        doutput[i][j]=0;
+                        doutput[i][j]=-1;
                 }
             }
             
@@ -303,12 +334,12 @@ void iris()
     double *testoutput;
     double **doutput;
     double **centroids;
-    double ***dcluster;
+   // double ***dcluster;
     double *hidden;
     double **w1;
     double **w1delta;
     double *poutput;
-    int *dclass_count;
+    //int *dclass_count;
     int ylabel;
     double *error;
     int confusion[noOfClasses][noOfClasses];
@@ -319,9 +350,9 @@ void iris()
     lines=0;
     if(fp!=NULL)
     {
-        cout<<"Enter the number of cluster for each label:";
+        cout<<"Enter the number of cluster:";
         cin>>k;
-        noOfNodesHidden=k*noOfClasses;
+        noOfNodesHidden=k;
         
         while(!feof(fp))
         {
@@ -333,19 +364,19 @@ void iris()
         
         dinput=(double **)malloc(sizeof(double *)*lines);
         doutput=(double **)malloc(sizeof(double *)*lines);
-        dclass_count=(int *)malloc(sizeof(int)*noOfClasses);
-        dcluster=(double ***)malloc(sizeof(double *)*noOfClasses);
+        //dclass_count=(int *)malloc(sizeof(int)*noOfClasses);
+        //dcluster=(double ***)malloc(sizeof(double *)*noOfClasses);
         
         
-        for(i=0;i<noOfClasses;i++)
-            dclass_count[i]=0;
+        //for(i=0;i<noOfClasses;i++)
+          //  dclass_count[i]=0;
         
         
         fseek(fp,0,SEEK_SET);
         
         for(i=0;i<lines;i++)
         {
-            if((dinput[i]=(double *)malloc(sizeof(double)*noOfDimension))
+            if((dinput[i]=(double *)malloc(sizeof(double)*(noOfDimension+1)))
                &&
                (doutput[i]=(double *)malloc(sizeof(double)*noOfClasses))
                )
@@ -355,6 +386,7 @@ void iris()
                 {
                     fscanf(fp,"%lf",&dinput[i][j]);
                 }
+                dinput[i][noOfDimension]=-1;
                 fscanf(fp,"%d", &ylabel);
                 
                 for(j=0;j<noOfClasses;j++)
@@ -362,7 +394,7 @@ void iris()
                     if(j==(ylabel-1))
                     {
                         doutput[i][j]=1;
-                        dclass_count[j]++;
+                        //dclass_count[j]++;
                     }
                     else
                         doutput[i][j]=0;
@@ -370,16 +402,16 @@ void iris()
             }
             
         }
-        for(i=0;i<noOfClasses;i++)
+       /* for(i=0;i<noOfClasses;i++)
         {
             dcluster[i]=(double **)malloc(sizeof(double *)*dclass_count[i]);
             for(j=0;j<dclass_count[i];j++)
             {
                 dcluster[i][j]=(double *)malloc(sizeof(double)*(noOfDimension+1));
             }
-        }
+        }*/
         
-        for(i=0;i<noOfClasses;i++)
+        /*for(i=0;i<noOfClasses;i++)
             dclass_count[i]=0;
         
         for(i=0;i<lines;i++)
@@ -398,7 +430,7 @@ void iris()
                     
             }
             
-        }
+        }*/
        /* for(i=0;i<noOfClasses;i++)
         {
             for(j=0;j<dclass_count[i];j++)
@@ -412,9 +444,9 @@ void iris()
             }
             cout<<"count***"<<count<<endl;
         }*/
-        centroids=kmean(dcluster, dclass_count, k, noOfDimension, noOfClasses);
+        centroids=kmean(dinput, k, noOfDimension, lines);
         
-        for(i=0;i<k*noOfClasses;i++)
+        for(i=0;i<k;i++)
         {
             for(j=0;j<=noOfDimension;j++)
             {
@@ -425,7 +457,7 @@ void iris()
         
         
         
-        hidden=(double *)malloc(sizeof(double)*noOfNodesHidden);
+        hidden=(double *)malloc(sizeof(double)*(noOfNodesHidden));
         poutput=(double *)malloc(sizeof(double)*noOfClasses);
         error=(double *)malloc(sizeof(double)*noOfClasses);
         w1=(double **)malloc(sizeof(double *)*noOfNodesHidden);
@@ -446,24 +478,27 @@ void iris()
         {
             for(l=0;l<lines;l++)
             {
+               // hidden[0]=1;
                 for(j=0;j<noOfNodesHidden;j++)
                 {
                     hidden[j]=rbf(centroids[j],dinput[l],noOfDimension);
+                    //cout<<l<<" : "<<hidden[j]<<" "<<centroids[j][noOfDimension]<<" "<<euclidean(centroids[j], dinput[l], noOfDimension)<<endl;
                 }
+                
                 
                 for(j=0;j<noOfClasses;j++)
                 {
                     poutput[j]=sigmoid(hidden,w1,noOfNodesHidden,j);
                     error[j]=(doutput[l][j]-poutput[j]);
-                    cout<<" d: " <<doutput[l][j]<<" p: "<<poutput[j];
+                    //cout<<" d: " <<doutput[l][j]<<" p: "<<poutput[j];
                     
                 }
-                cout<<endl;
+                //cout<<endl;
                 for(j=0;j<noOfNodesHidden;j++)
                 {
                     for(m=0;m<noOfClasses;m++)
                     {
-                        w1delta[j][m]=eta*error[j]*poutput[m]*(1-poutput[m])* hidden[j];
+                        w1delta[j][m]=eta*error[m]*poutput[m]*(1-poutput[m])* hidden[j];
                     }
                 }
                 
@@ -521,9 +556,11 @@ void iris()
                         testoutput[i]=0;
                 }
                 
+                //hidden[0]=1;
                 for(j=0;j<noOfNodesHidden;j++)
                 {
                     hidden[j]=rbf(centroids[j],testinput,noOfDimension);
+                    //cout<<hidden[j]<<" "<<centroids[j][noOfDimension]<<" "<<euclidean(centroids[j], testinput, noOfDimension)<<endl;
                 }
                 
                 for(j=0;j<noOfClasses;j++)
@@ -535,7 +572,7 @@ void iris()
                 double max=DBL_MIN;
                 for(i=0;i<noOfClasses;i++)
                 {
-                    if(max < testoutput[i])
+                    if( testoutput[i] > max )
                     {
                         max=testoutput[i];
                         max_index=i;
