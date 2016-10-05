@@ -16,7 +16,7 @@
 using namespace std;
 
 const char PATH[1024]="/Users/sankarsanseal/Documents/RBFNN/RBFNN/";
-void rbfnn(int noOfDimensions, int noOfClasses, int k, FILE * train, FILE * test);
+void rbfnn(int noOfDimensions, int noOfClasses, int k, FILE * train, FILE * test[]);
 
 double euclidean( double *centroiddim, double * patterndim, int noOfDimension)
 {
@@ -236,7 +236,7 @@ double ** kmean(double ***dcluster, int *dclass_count,int k,int noOfDimensions, 
         if(centroids[i][noOfDimensions]!=0)
         centroids[i][noOfDimensions]=1/(2*pow(centroids[i][noOfDimensions],2));
         else
-            centroids[i][noOfDimensions]=DBL_EPSILON;
+            centroids[i][noOfDimensions]=1/DBL_EPSILON;
     }
     
     return centroids;
@@ -252,7 +252,7 @@ void wine()
     int k=0;
     
     FILE * fp;
-    FILE * fpt;
+    FILE * fpt[2];
     
     
     fp=fopen(strcat(temp,"wine.train.txt"),"r");
@@ -264,13 +264,17 @@ void wine()
         //noOfNodesHidden=k;
         strcpy(temp,PATH);
         
-        fpt=fopen(strcat(temp,"wine.test.txt"),"r");
+        fpt[0]=fopen(strcat(temp,"wine.train.txt"),"r");
+        strcpy(temp,PATH);
+        fpt[1]=fopen(strcat(temp,"wine.test.txt"),"r");
         
-        if(fpt!=NULL)
+        
+        if(fpt[0]!=NULL && fpt[1]!=NULL)
         {
             rbfnn(noOfDimensions, k , noOfClasses, fp, fpt);
             fclose(fp);
-            fclose(fpt);
+            fclose(fpt[0]);
+            fclose(fpt[1]);
         }
         else
         {
@@ -297,7 +301,7 @@ void iris()
     int k=0;
     
     FILE * fp;
-    FILE * fpt;
+    FILE * fpt[2];
     
     
     fp=fopen(strcat(temp,"iris.train.txt"),"r");
@@ -309,13 +313,16 @@ void iris()
         
         strcpy(temp,PATH);
         
-        fpt=fopen(strcat(temp,"iris.train.txt"),"r");
+        fpt[0]=fopen(strcat(temp,"iris.train.txt"),"r");
+        strcpy(temp,PATH);
+        fpt[1]=fopen(strcat(temp,"iris.test.txt"),"r");
         
-        if(fpt!=NULL)
+        if(fpt[0]!=NULL && fpt[1]!=NULL)
         {
             rbfnn(noOfDimensions, k, noOfClasses, fp, fpt);
             fclose(fp);
-            fclose(fpt);
+            fclose(fpt[0]);
+            fclose(fpt[1]);
         }
         else
         {
@@ -332,7 +339,7 @@ void iris()
 }
 
 
-void rbfnn(int noOfDimensions, int k, int noOfClasses,  FILE * train, FILE * test)
+void rbfnn(int noOfDimensions, int k, int noOfClasses,  FILE * train, FILE * test[])
 {
     //char temp[1024];
     //strcpy(temp,PATH);
@@ -359,7 +366,13 @@ void rbfnn(int noOfDimensions, int k, int noOfClasses,  FILE * train, FILE * tes
     int *dclass_count;
     int ylabel;
     double *error;
-    int confusion[noOfClasses][noOfClasses];
+    double confusion[noOfClasses][noOfClasses];
+    double truepositive[noOfClasses];
+    double truenegative[noOfClasses];
+    double falsepositive[noOfClasses];
+    double falsenegative[noOfClasses];
+    double totalcount=0;
+    double diagonal=0;
     
     //int count=0;
     
@@ -538,80 +551,158 @@ void rbfnn(int noOfDimensions, int k, int noOfClasses,  FILE * train, FILE * tes
             cout<<endl;
         }
         
-        for(i=0;i<noOfClasses;i++)
-            for(j=0;j<noOfClasses;j++)
-                confusion[i][j]=0;
         
-        //strcpy(temp,PATH);
-        
-        fpt=test;
-        //fopen(strcat(temp,"iris.test.txt"),"r");
-        testinput=(double *)malloc(sizeof(double)*noOfDimensions);
-        testoutput=(double *)malloc(sizeof(double)*noOfClasses);
-        //cout<<"here"<<endl;
-        while(!feof(fpt))
+        for(l=0;l<2;l++)
         {
-            if(!feof(fpt))
+            totalcount=0;
+            diagonal=0;
+            for(i=0;i<noOfClasses;i++)
             {
-                for(i=0;i<noOfDimensions;i++)
+                truepositive[i]=
+                truenegative[i]=
+                falsepositive[i]=
+                falsenegative[i]=0;
+                for(j=0;j<noOfClasses;j++)
+                    confusion[i][j]=0;
+            }
+            
+            //strcpy(temp,PATH);
+            
+            
+            fpt=test[l];
+            //fopen(strcat(temp,"iris.test.txt"),"r");
+            testinput=(double *)malloc(sizeof(double)*noOfDimensions);
+            testoutput=(double *)malloc(sizeof(double)*noOfClasses);
+            //cout<<"here"<<endl;
+            while(!feof(fpt))
+            {
+                if(!feof(fpt))
                 {
-                    fscanf(fpt,"%lf",&testinput[i]);
-                    //cout<<testinput[i]<<" ";
-                }
-                fscanf(fpt, "%d",&ylabel);
-                //cout<<ylabel<<" "<<endl;
-                
-                for(i=0;i<noOfClasses;i++)
-                {
-                    if(i==(ylabel-1))
+                    for(i=0;i<noOfDimensions;i++)
                     {
-                        testoutput[i]=1;
+                        fscanf(fpt,"%lf",&testinput[i]);
+                        //cout<<testinput[i]<<" ";
                     }
-                    else
-                        testoutput[i]=0;
+                    fscanf(fpt, "%d",&ylabel);
+                    //cout<<ylabel<<" "<<endl;
+                    
+                    for(i=0;i<noOfClasses;i++)
+                    {
+                        if(i==(ylabel-1))
+                        {
+                            testoutput[i]=1;
+                        }
+                        else
+                            testoutput[i]=0;
+                    }
+                    
+                    for(j=0;j<noOfNodesHidden;j++)
+                    {
+                        hidden[j]=rbf(centroids[j],testinput,noOfDimensions);
+                    }
+                    
+                    for(j=0;j<noOfClasses;j++)
+                    {
+                        testoutput[j]=sigmoid(hidden,w1,noOfNodesHidden,j);
+                    }
+                    
+                    int max_index=-1;
+                    double max=DBL_MIN;
+                    for(i=0;i<noOfClasses;i++)
+                    {
+                        if(max < testoutput[i])
+                        {
+                            max=testoutput[i];
+                            max_index=i;
+                        }
+                    }
+                    
+                    confusion[ylabel-1][max_index]++;
+                    
                 }
                 
-                for(j=0;j<noOfNodesHidden;j++)
-                {
-                    hidden[j]=rbf(centroids[j],testinput,noOfDimensions);
-                }
                 
+                
+            }
+            
+            if(l==0)
+            cout<<"Confusion Matrix of train data:"<<endl;
+            else if (l==1)
+                cout<<"Confusion Matrix of test data:"<<endl;
+            cout<<"Actual\\\t\tPredicted Values"<<endl;
+            cout<<"Values\\";
+            cout<<endl;
+            for(i=0;i<=noOfClasses;i++)
+            if(i==0)
+                cout<<"\t";
+            else
+                cout<<"\t\t\t"<<i;
+            
+            cout<<endl;
+            
+            for(i=0;i<=noOfClasses;i++)
+                if(i==0)
+                    cout<<"\t";
+                else
+                    cout<<"\t\t\t-";
+            
+            cout<<endl;
+            for(i=0;i<noOfClasses;i++)
+            {
+                cout<<"\t"<<i+1<<"|";
                 for(j=0;j<noOfClasses;j++)
                 {
-                    testoutput[j]=sigmoid(hidden,w1,noOfNodesHidden,j);
+                    totalcount+=confusion[i][j];
+                    if(i==j)
+                    {
+                        diagonal+=confusion[i][j];
+                    }
+                    
+                    cout<<"\t\t\t"<<confusion[i][j];
+                }
+                cout<<endl;
+            }
+            for(i=0;i<noOfClasses;i++)
+            {
+                truepositive[i]=confusion[i][i];
+                for(j=0;j<i;j++)
+                {
+                    falsenegative[i]+=confusion[i][j];
+                    falsepositive[i]+=confusion[j][i];
                 }
                 
-                int max_index=-1;
-                double max=DBL_MIN;
-                for(i=0;i<noOfClasses;i++)
+                for(j=i+1;j<noOfClasses;j++)
                 {
-                    if(max < testoutput[i])
+                    falsenegative[i]+=confusion[i][j];
+                    falsepositive[i]+=confusion[j][i];
+                }
+                
+                for(j=0;j<i;j++)
+                {
+                    for(m=0;m<i;m++)
                     {
-                        max=testoutput[i];
-                        max_index=i;
+                       // cout<<"j:"<<j<<" m:"<<m<<" i:"<<i<<endl;
+                        truenegative[i]+=confusion[j][m];
+                        
                     }
                 }
                 
-                confusion[ylabel-1][max_index]++;
+                for(j=i+1;j<noOfClasses;j++)
+                {
+                    for(m=i+1;m<noOfClasses;m++)
+                    {
+                        truenegative[i]+=confusion[j][m];
+                    }
+                }
                 
+                        
+                cout<<"Recall of class "<<i+1<<":"<<truepositive[i]/(truepositive[i]+falsenegative[i])<<endl;
+                cout<<"Precision of class "<<i+1<<":"<<truepositive[i]/(truepositive[i]+falsepositive[i])<<endl;;
             }
             
             
-            
+            cout<<"Accuracy:"<<diagonal/totalcount<<endl;;
         }
-        
-        cout<<"Confusion Matrix of test data:"<<endl;
-        for(i=0;i<noOfClasses;i++)
-        {
-            for(j=0;j<noOfClasses;j++)
-            {
-                cout<<confusion[i][j]<<" ";
-            }
-            cout<<endl;
-        }
-        
-        
-        
         
         
     }
