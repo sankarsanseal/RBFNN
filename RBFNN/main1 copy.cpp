@@ -55,12 +55,12 @@ double sigmoid(double * hidden, double ** weight, int noOfHidden, int neuron_ind
 
 double ** kmean(double ***dcluster, int *dclass_count,int k,int noOfDimensions, int noOfClasses)
 {
-    int i,/*j,*/l,m;
+    int i,j,l,m;
     double **centroids=NULL;
     double **tempcentroids=NULL;
     centroids=(double **)malloc(sizeof(double *)*k*noOfClasses);
     tempcentroids=(double **)malloc(sizeof(double*)*k*noOfClasses);
-    //bool changed=true;
+    bool changed=true;
     int count[k*noOfClasses];
     
     //cout<<"no of Classes:"<<noOfClasses<<endl;
@@ -108,7 +108,6 @@ double ** kmean(double ***dcluster, int *dclass_count,int k,int noOfDimensions, 
      cout<<"***"<<endl;
      }
      */
-    /*
     while(changed)
     {
         changed=false;
@@ -239,7 +238,6 @@ double ** kmean(double ***dcluster, int *dclass_count,int k,int noOfDimensions, 
         else
             centroids[i][noOfDimensions]=1/DBL_EPSILON;
     }
-     */
     
     return centroids;
 }
@@ -365,7 +363,6 @@ void rbfnn(int noOfDimensions, int k, int noOfClasses,  FILE * train, FILE * tes
     double **w1;
     double **w1delta;
     double *poutput;
-    double *deviation;
     int *dclass_count;
     int ylabel;
     double *error;
@@ -377,8 +374,7 @@ void rbfnn(int noOfDimensions, int k, int noOfClasses,  FILE * train, FILE * tes
     double totalcount=0;
     double diagonal=0;
     
-    int *count;
-    
+    //int count=0;
     
     fp=train;
     //fopen(strcat(temp,"iris.train.txt"),"r");
@@ -492,8 +488,6 @@ void rbfnn(int noOfDimensions, int k, int noOfClasses,  FILE * train, FILE * tes
         
         
         hidden=(double *)malloc(sizeof(double)*noOfNodesHidden);
-        deviation=(double *) malloc(sizeof(double)*noOfNodesHidden);
-        count=(int*)malloc(sizeof(int)*noOfNodesHidden);
         poutput=(double *)malloc(sizeof(double)*noOfClasses);
         error=(double *)malloc(sizeof(double)*noOfClasses);
         w1=(double **)malloc(sizeof(double *)*noOfNodesHidden);
@@ -512,87 +506,18 @@ void rbfnn(int noOfDimensions, int k, int noOfClasses,  FILE * train, FILE * tes
         
         for(i=0;i<noOfIterations;i++)
         {
-            for(m=0;m<noOfNodesHidden;m++)
-            {
-                deviation[m]=0;
-                count[m]=0;
-            }
-            for(m=0;m<noOfClasses;m++)
-            {
- 
-                int start_index=(m*k);
-                int end_index=(m*k)+k;
-                for(l=0;l<dclass_count[m];l++)
-                {
-                    
-                    double min=DBL_MAX;
-                    double distance=0;
-                    int minindex=-1;
-                    for(j=start_index;j<end_index;j++)
-                    {
-                        
-                        distance=euclidean( centroids[j],dcluster[m][l],noOfDimensions);
-                        if(min>distance)
-                        {
-                            min=distance;
-                            minindex=j;
-                        }
-                    }
-                    if(dcluster[m][l][noOfDimensions]!=(double)minindex)
-                    {
-                        dcluster[m][l][noOfDimensions]=(double)minindex;
-
-                        // cout<<"minindex "<<dcluster[i][l][noOfDimensions]<<" : "<<minindex<<endl;
-                       // changed=true;
-                    }
-                }
-                
-                
-            }
-            
-            for(m=0;m<noOfClasses;m++)
-            {
-                for(l=0;l<dclass_count[m];l++)
-                {
-                    int centindex=(int)dcluster[m][l][noOfDimensions];
-                    if(centindex!=-1)
-                    {
-                        deviation[centindex]+=euclidean(centroids[centindex], dcluster[m][l], noOfDimensions);
-                        count[centindex]++;
-                    }
-                }
-                
-            }
-            
-            for(m=0;m<noOfNodesHidden;m++)
-            {
-                if(count[m]!=0)
-                    centroids[m][noOfDimensions]=deviation[m]/count[m];
-                else
-                    centroids[m][noOfDimensions]=0;
-                    
-                
-                if(centroids[m][noOfDimensions]!=0)
-                    centroids[m][noOfDimensions]=1/(2*pow(centroids[m][noOfDimensions],2));
-                else
-                    centroids[m][noOfDimensions]=1/DBL_EPSILON;
-                
-            }
-
-            
             for(l=0;l<lines;l++)
             {
                 for(j=0;j<noOfNodesHidden;j++)
                 {
                     hidden[j]=rbf(centroids[j],dinput[l],noOfDimensions);
-                   // cout<<"hidden:"<<hidden[j]<<" Centroid:"<<centroids[j][noOfDimensions]<<endl;
                 }
                 
                 for(j=0;j<noOfClasses;j++)
                 {
                     poutput[j]=sigmoid(hidden,w1,noOfNodesHidden,j);
                     error[j]=(doutput[l][j]-poutput[j]);
-                    //cout<<" d: " <<doutput[l][j]<<" p: "<<poutput[j]<<endl;
+                    //cout<<" d: " <<doutput[l][j]<<" p: "<<poutput[j];
                     
                 }
                 //cout<<endl;
@@ -602,23 +527,6 @@ void rbfnn(int noOfDimensions, int k, int noOfClasses,  FILE * train, FILE * tes
                     {
                         w1delta[j][m]=eta*error[m]*poutput[m]*(1-poutput[m])* hidden[j];
                     }
-                }
-                
-                for(j=0;j<noOfNodesHidden;j++)
-                {
-                    double delta=0;
-                    
-                    for(m=0;m<noOfClasses;m++)
-                    {
-                        delta+=error[m]*w1[j][m]*poutput[m]*(1-poutput[m])*hidden[j];
-                    }
-                    //cout<<"delta:"<<delta<<" e:"<<error[m]<<" w1:"<<w1[j][m]<<" p:"<<poutput[m]<<" h:"
-                     //           <<hidden[j]<<endl;
-                    for(m=0;m<noOfDimensions;m++)
-                    {
-                        centroids[j][m]+=eta*delta*centroids[j][noOfDimensions]*(dinput[l][m]-centroids[j][m]);
-                    }
-                    
                 }
                 
                 for(j=0;j<noOfNodesHidden;j++)
